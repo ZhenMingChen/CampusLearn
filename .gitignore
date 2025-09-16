@@ -1,0 +1,21 @@
+﻿# Node
+node_modules/
+npm-debug.log*
+pnpm-lock.yaml
+yarn.lock
+
+# Env & secrets
+.env
+backend/.env
+frontend/.env
+
+# Build output
+dist/
+build/
+backend/dist/
+frontend/dist/
+
+# Misc
+uploads/
+*.log
+.DS_Store

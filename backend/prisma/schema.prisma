@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  TUTOR
+  ADMIN
+}
+
+enum TopicStatus {
+  OPEN
+  ASSIGNED
+  CLOSED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(STUDENT)
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // authored topics (student/tutor/admin)
+  topics         Topic[] @relation("TopicAuthor")
+  // replies written by user
+  replies        Reply[]
+  // ?? back-relation for Topic.assignee
+  assignedTopics Topic[] @relation("TopicAssignee")
+}
+
+model Topic {
+  id      String @id @default(cuid())
+  title   String
+  content String
+
+  // author relation
+  author   User   @relation("TopicAuthor", fields: [authorId], references: [id])
+  authorId String
+
+  // assignee relation (optional)
+  assignee   User?   @relation("TopicAssignee", fields: [assigneeId], references: [id])
+  assigneeId String?
+
+  status    TopicStatus @default(OPEN)
+  files     File[]
+  replies   Reply[]
+  createdAt DateTime    @default(now())
+}
+
+model Reply {
+  id        String   @id @default(cuid())
+  content   String
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  String
+  topic     Topic    @relation(fields: [topicId], references: [id])
+  topicId   String
+  createdAt DateTime @default(now())
+}
+
+model File {
+  id        String   @id @default(cuid())
+  url       String
+  mime      String
+  size      Int
+  topic     Topic?   @relation(fields: [topicId], references: [id])
+  topicId   String?
+  createdAt DateTime @default(now())
+}
