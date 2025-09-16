@@ -4,21 +4,26 @@ import helmet from 'helmet';
 import cors from 'cors';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
-import compression from 'compression';            // NEW
+import compression from 'compression';
 import { corsOptions } from './config/cors.js';
 import routes from './routes/index.js';
 import { errorHandler } from './middleware/error.js';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './docs/openapi.js';
 
 const app = express();
 
 // Security & basics
 app.use(helmet());
-app.use(compression());                           // NEW (place right after helmet)
-app.use(cors(corsOptions));            // CORS early
+app.use(compression());
+app.use(cors(corsOptions));      // CORS early
 app.use(morgan('dev'));
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 app.use('/uploads', express.static('uploads'));
+
+// Swagger UI (API docs)
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Health + root info
 app.get('/', (_req, res) => res.send('CampusLearn API is running. See /api/v1'));
