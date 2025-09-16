@@ -1,4 +1,10 @@
-﻿## Project Overview
+﻿# CampusLearn
+
+Full-stack e-learning app for SEN371 Final Project.
+
+---
+
+## Project Overview
 
 **Problem.** Students and tutors struggle to coordinate questions, assignments, and learning materials in one place.
 
@@ -13,33 +19,36 @@
 **Tech & Key Features.**
 - **Frontend:** React + Vite + Tailwind (responsive, accessible UI)
 - **Backend:** Node/Express + Prisma + PostgreSQL (RESTful API, JWT, role-based access)
-- **Quality:** Helmet, rate-limit, validation (Joi), error handler, upload limits, CORS
-- **Integrations:** Twilio WhatsApp (notify on file upload)
+- **Quality:** Helmet, CORS allow-list, rate limiting, Joi validation, error handler, upload limits, **gzip compression**
+- **Integrations:** Twilio WhatsApp (notify on file upload / test endpoint)
+- **Docs:** **Swagger UI** (OpenAPI) for live, interactive API docs
 
-# CampusLearn
-
-Full-stack e-learning app for SEN371 Final Project.
+---
 
 ## Stack
-- Backend: Node.js, Express, Prisma, PostgreSQL, JWT
-- Frontend: React (Vite), Tailwind CSS
+- **Backend:** Node.js, Express, Prisma, PostgreSQL, JWT
+- **Frontend:** React (Vite), Tailwind CSS
 
-## Run locally
-\\\ash
-# Backend
+---
+
+## Prerequisites
+- Git, Node.js ≥ 18, PostgreSQL ≥ 14
+- (Recommended) VS Code + extensions: Prisma, Tailwind CSS IntelliSense, ESLint, Prettier
+
+---
+
+## Environment
+
+Create env files from the examples:
+
+```bash
+# Backend env (the server reads this)
 cd backend
-npm install
-npx prisma migrate dev
-node scripts/seed.js
-npm run dev
+cp .env.example .env
+# Edit .env: set DATABASE_URL and (optional) TWILIO_* keys
 
-# Frontend (new terminal)
+# (optional) frontend env
 cd ../frontend
-npm install
-npm run dev
-\\\
+cp .env.example .env
 
-## Demo accounts
-- student@demo.dev / Passw0rd! (STUDENT)
-- tutor@demo.dev   / Passw0rd! (TUTOR)
-- admin@demo.dev   / Passw0rd! (ADMIN)
+
