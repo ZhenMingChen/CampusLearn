@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
+import compression from 'compression';            // NEW
 import { corsOptions } from './config/cors.js';
 import routes from './routes/index.js';
 import { errorHandler } from './middleware/error.js';
@@ -12,6 +13,7 @@ const app = express();
 
 // Security & basics
 app.use(helmet());
+app.use(compression());                           // NEW (place right after helmet)
 app.use(cors(corsOptions));            // CORS early
 app.use(morgan('dev'));
 app.use(express.json({ limit: '1mb' }));
@@ -29,4 +31,5 @@ app.use('/api/v1', routes);
 app.use(errorHandler);
 
 export default app;
+
 
