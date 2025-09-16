@@ -1,12 +1,17 @@
 import { Router } from 'express';
-import auth from './auth.routes.js';
-import topic from './topic.routes.js';
-import reply from './reply.routes.js';
-import file from './file.routes.js';
+import authRoutes from './auth.routes.js';
+import topicRoutes from './topic.routes.js';
+import replyRoutes from './reply.routes.js';
+import fileRoutes from './file.routes.js';
+import integrationRoutes from '../integrations/routes.js'; // <-- point to src/integrations/routes.js
 
-const r = Router();
-r.use('/auth', auth);
-r.use('/topics', topic);
-r.use('/replies', reply);
-r.use('/files', file);
-export default r;
+const router = Router();
+
+router.use('/auth', authRoutes);
+router.use('/topics', topicRoutes);
+router.use('/replies', replyRoutes);
+router.use('/file', fileRoutes);
+router.use('/integrations', integrationRoutes);
+
+export default router;
+

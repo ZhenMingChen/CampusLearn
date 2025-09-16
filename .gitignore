@@ -19,3 +19,5 @@ frontend/dist/
 uploads/
 *.log
 .DS_Store
+
+backend/.env
