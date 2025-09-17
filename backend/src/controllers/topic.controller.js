@@ -9,12 +9,14 @@ export async function list(_req, res, next) {
     const topics = await prisma.topic.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
-        author: { select: { id: true, name: true, email: true, role: true } },
+        author:   { select: { id: true, name: true, email: true, role: true } },
         assignee: { select: { id: true, name: true, email: true, role: true } },
         replies: {
           orderBy: { createdAt: 'asc' },
           include: { author: { select: { id: true, name: true } } },
         },
+        // Uncomment if you want to show materials in lists too:
+        // materials: true,
       },
     });
     res.json(topics);
@@ -28,15 +30,18 @@ export async function get(req, res, next) {
     const topic = await prisma.topic.findUnique({
       where: { id },
       include: {
-        author: { select: { id: true, name: true, email: true, role: true } },
+        author:   { select: { id: true, name: true, email: true, role: true } },
         assignee: { select: { id: true, name: true, email: true, role: true } },
         replies: {
           orderBy: { createdAt: 'asc' },
           include: { author: { select: { id: true, name: true } } },
         },
+        // materials: true,
       },
     });
-    if (!topic) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Topic not found' } });
+    if (!topic) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Topic not found' } });
+    }
     res.json(topic);
   } catch (err) { next(err); }
 }
@@ -51,16 +56,14 @@ export async function create(req, res, next) {
       return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'title and content are required' } });
     }
 
-    // Use EITHER authorId or author.connect; here we use authorId (simpler)
     const topic = await prisma.topic.create({
       data: {
         title,
         content,
-        authorId: userId,          // <-- key fix
-        // status will default to OPEN in schema; omit assigneeId unless you really assign
+        authorId: userId,
       },
       include: {
-        author: { select: { id: true, name: true } },
+        author:  { select: { id: true, name: true } },
         replies: true,
       },
     });
@@ -77,7 +80,7 @@ export async function assign(req, res, next) {
       where: { id },
       data: { assigneeId },
       include: {
-        author: { select: { id: true, name: true } },
+        author:   { select: { id: true, name: true } },
         assignee: { select: { id: true, name: true } },
       },
     });
@@ -85,11 +88,28 @@ export async function assign(req, res, next) {
   } catch (err) { next(err); }
 }
 
-/** DELETE /topics/:id  (ADMIN only if you add the route) */
+// backend/src/controllers/topic.controller.js
 export async function remove(req, res, next) {
   try {
     const { id } = req.params;
-    await prisma.topic.delete({ where: { id } });
-    res.json({ ok: true });
-  } catch (err) { next(err); }
+
+    await prisma.$transaction(async (tx) => {
+      // if you have LearningMaterial, delete first
+      if (tx.learningMaterial?.deleteMany) {
+        await tx.learningMaterial.deleteMany({ where: { topicId: id } });
+      }
+      await tx.reply.deleteMany({ where: { topicId: id } });
+      await tx.topic.delete({ where: { id } });
+    });
+
+    // Send JSON so the frontend can safely res.json()
+    return res.status(200).json({ ok: true, deletedId: id });
+  } catch (err) {
+    if (err?.code === 'P2025') {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Topic not found' } });
+    }
+    next(err);
+  }
 }
+
+
