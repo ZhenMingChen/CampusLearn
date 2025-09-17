@@ -7,13 +7,15 @@ import integrationRoutes from '../integrations/routes.js';
 import systemRoutes from './system.routes.js';
 
 const router = Router();
+
 router.use('/auth', authRoutes);
 router.use('/topics', topicRoutes);
-router.use('/replies', replyRoutes);
+router.use('/replies', replyRoutes);   // <-- make sure this line exists
 router.use('/file', fileRoutes);
 router.use('/integrations', integrationRoutes);
-router.use('/system', systemRoutes);   // <— new
+router.use('/system', systemRoutes);
 
 export default router;
+
 
 

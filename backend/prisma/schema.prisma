@@ -1,3 +1,4 @@
+// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -25,45 +26,44 @@ model User {
   password  String
   name      String
   role      Role     @default(STUDENT)
-  verified  Boolean  @default(false)
+  verified  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // authored topics (student/tutor/admin)
-  topics         Topic[] @relation("TopicAuthor")
-  // replies written by user
+  // relations
+  topics         Topic[] @relation("TopicAuthor") // topics the user authored
+  assignedTopics Topic[] @relation("TopicAssignee") // topics assigned to this user (tutor/admin)
   replies        Reply[]
-  // ?? back-relation for Topic.assignee
-  assignedTopics Topic[] @relation("TopicAssignee")
+  uploads        File[] // files uploaded by this user (optional)
 }
 
 model Topic {
-  id      String @id @default(cuid())
-  title   String
-  content String
-
-  // author relation
-  author   User   @relation("TopicAuthor", fields: [authorId], references: [id])
-  authorId String
-
-  // assignee relation (optional)
-  assignee   User?   @relation("TopicAssignee", fields: [assigneeId], references: [id])
+  id         String      @id @default(cuid())
+  title      String
+  content    String
+  status     TopicStatus @default(OPEN)
+  authorId   String
   assigneeId String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 
-  status    TopicStatus @default(OPEN)
-  files     File[]
-  replies   Reply[]
-  createdAt DateTime    @default(now())
+  // relations
+  author   User    @relation("TopicAuthor", fields: [authorId], references: [id])
+  assignee User?   @relation("TopicAssignee", fields: [assigneeId], references: [id])
+  replies  Reply[]
+  files    File[] // ?? back-relation for File.topic
 }
 
 model Reply {
   id        String   @id @default(cuid())
   content   String
-  author    User     @relation(fields: [authorId], references: [id])
   authorId  String
-  topic     Topic    @relation(fields: [topicId], references: [id])
   topicId   String
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author User  @relation(fields: [authorId], references: [id])
+  topic  Topic @relation(fields: [topicId], references: [id])
 }
 
 model File {
@@ -71,7 +71,13 @@ model File {
   url       String
   mime      String
   size      Int
-  topic     Topic?   @relation(fields: [topicId], references: [id])
-  topicId   String?
   createdAt DateTime @default(now())
+
+  // optional link to a topic
+  topicId String?
+  topic   Topic?  @relation(fields: [topicId], references: [id])
+
+  // optional: who uploaded
+  uploaderId String?
+  uploader   User?   @relation(fields: [uploaderId], references: [id])
 }

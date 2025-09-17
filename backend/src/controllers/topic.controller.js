@@ -3,22 +3,46 @@ import pkg from '@prisma/client';
 const { PrismaClient } = pkg;
 const prisma = new PrismaClient();
 
-/** GET /topics */
-export async function list(_req, res, next) {
+/** GET /topics (role-aware) */
+export async function list(req, res, next) {
   try {
+    const userId = req.user?.id;
+    const role = req.user?.role;
+
+    let where = {};
+    if (role === 'ADMIN') {
+      where = {};
+    } else if (role === 'TUTOR') {
+      where = {
+        OR: [
+          { status: 'OPEN' },
+          { assigneeId: userId },
+        ],
+      };
+    } else {
+      where = {
+        OR: [
+          { authorId: userId },
+          { assigneeId: userId },
+          { status: 'OPEN' },
+        ],
+      };
+    }
+
     const topics = await prisma.topic.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
       include: {
         author:   { select: { id: true, name: true, email: true, role: true } },
         assignee: { select: { id: true, name: true, email: true, role: true } },
-        replies: {
+        replies:  {
           orderBy: { createdAt: 'asc' },
           include: { author: { select: { id: true, name: true } } },
         },
-        // Uncomment if you want to show materials in lists too:
-        // materials: true,
+        files: true,
       },
     });
+
     res.json(topics);
   } catch (err) { next(err); }
 }
@@ -32,25 +56,24 @@ export async function get(req, res, next) {
       include: {
         author:   { select: { id: true, name: true, email: true, role: true } },
         assignee: { select: { id: true, name: true, email: true, role: true } },
-        replies: {
+        replies:  {
           orderBy: { createdAt: 'asc' },
           include: { author: { select: { id: true, name: true } } },
         },
-        // materials: true,
+        files: true,
       },
     });
-    if (!topic) {
-      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Topic not found' } });
-    }
+    if (!topic) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Topic not found' } });
     res.json(topic);
   } catch (err) { next(err); }
 }
 
-/** POST /topics  (STUDENT only) */
+/** POST /topics (STUDENT only) */
 export async function create(req, res, next) {
   try {
     const { title, content } = req.body || {};
-    const userId = req.user?.id; // set by authRequired middleware
+    const userId = req.user?.id;
+
     if (!userId) return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Missing user' } });
     if (!title || !content) {
       return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'title and content are required' } });
@@ -61,24 +84,26 @@ export async function create(req, res, next) {
         title,
         content,
         authorId: userId,
+        status: 'OPEN',
       },
       include: {
-        author:  { select: { id: true, name: true } },
+        author:  { select: { id: true, name: true, email: true, role: true } },
         replies: true,
+        files: true,
       },
     });
 
-    return res.status(201).json(topic);
+    res.status(201).json(topic);
   } catch (err) { next(err); }
 }
 
-/** POST /topics/:id/assign/:assigneeId  (ADMIN/TUTOR if you enable it) */
+/** POST /topics/:id/assign/:assigneeId (ADMIN/TUTOR) */
 export async function assign(req, res, next) {
   try {
     const { id, assigneeId } = req.params;
     const updated = await prisma.topic.update({
       where: { id },
-      data: { assigneeId },
+      data: { assigneeId, status: 'ASSIGNED' },
       include: {
         author:   { select: { id: true, name: true } },
         assignee: { select: { id: true, name: true } },
@@ -88,28 +113,17 @@ export async function assign(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// backend/src/controllers/topic.controller.js
+/** DELETE /topics/:id (ADMIN) */
 export async function remove(req, res, next) {
   try {
     const { id } = req.params;
-
-    await prisma.$transaction(async (tx) => {
-      // if you have LearningMaterial, delete first
-      if (tx.learningMaterial?.deleteMany) {
-        await tx.learningMaterial.deleteMany({ where: { topicId: id } });
-      }
-      await tx.reply.deleteMany({ where: { topicId: id } });
-      await tx.topic.delete({ where: { id } });
-    });
-
-    // Send JSON so the frontend can safely res.json()
-    return res.status(200).json({ ok: true, deletedId: id });
-  } catch (err) {
-    if (err?.code === 'P2025') {
-      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Topic not found' } });
-    }
-    next(err);
-  }
+    await prisma.reply.deleteMany({ where: { topicId: id } }); // clean replies first (FK safety)
+    await prisma.file.deleteMany({ where: { topicId: id } });  // clean files if linked
+    await prisma.topic.delete({ where: { id } });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
 }
+
+
 
 
