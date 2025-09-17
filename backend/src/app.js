@@ -1,28 +1,33 @@
-// backend/src/app.js
 import express from 'express';
 import helmet from 'helmet';
-import cors from 'cors';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import compression from 'compression';
-import { corsOptions } from './config/cors.js';
+import swaggerUi from 'swagger-ui-express';
+
+import { corsMiddleware } from './config/cors.js';   // note: using the middleware wrapper
 import routes from './routes/index.js';
 import { errorHandler } from './middleware/error.js';
-import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './docs/openapi.js';
 
 const app = express();
 
-// Security & basics
-app.use(helmet());
+// Security (relax CSP just enough for swagger-ui)
+app.use(helmet({
+  contentSecurityPolicy: false,                 // swagger-ui injects inline styles/scripts
+  crossOriginResourcePolicy: { policy: 'same-origin' },
+}));
+
 app.use(compression());
-app.use(cors(corsOptions));      // CORS early
+app.use(corsMiddleware);                        // CORS early
+app.options('*', corsMiddleware);               // handle all preflight requests
+
 app.use(morgan('dev'));
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 app.use('/uploads', express.static('uploads'));
 
-// Swagger UI (API docs)
+// Swagger UI (API docs) on same origin -> no cross-site issues
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Health + root info
@@ -36,5 +41,6 @@ app.use('/api/v1', routes);
 app.use(errorHandler);
 
 export default app;
+
 
 

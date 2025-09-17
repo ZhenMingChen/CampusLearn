@@ -36,7 +36,14 @@ const r = Router();
 r.post('/whatsapp/test', authRequired, async (req, res, next) => {
   try {
     const text = req.body?.text || 'CampusLearn WhatsApp test message';
-    const out = await sendWhatsapp(text);
+
+    // destination number comes from env
+    const to = process.env.REPLY_NOTIFY_TO; // e.g. whatsapp:+27XXXXXXXXXX
+    if (!to) {
+      return res.json({ ok: false, skipped: true, reason: 'REPLY_NOTIFY_TO not set in .env' });
+    }
+
+    const out = await sendWhatsapp(to, text);
     res.json({ ok: true, result: out });
   } catch (e) { next(e); }
 });
@@ -74,5 +81,6 @@ r.post('/copilot', authRequired, async (req, res, next) => {
 });
 
 export default r;
+
 
 
