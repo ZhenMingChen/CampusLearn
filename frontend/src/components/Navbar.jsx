@@ -23,21 +23,18 @@ export default function Navbar(){
     <nav className="bg-white/80 backdrop-blur border-b sticky top-0 z-40">
       <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-2">
         <Link to={user ? "/topics" : "/login"} className="font-bold">CampusLearn</Link>
-
-        {/* Only show protected links when logged in */}
         {user && (
           <div className="ml-2 flex gap-1">
             {link("/topics","Topics")}
-            {user.role === 'STUDENT' && link("/upload","Uploads")}
+            {link("/uploads","Uploads")}
           </div>
         )}
-
         <div className="ml-auto flex items-center gap-3">
           {user ? (
             <>
               <span className="text-xs text-gray-600">
-                Logged in as <span className="font-medium">{user.name || user.email}</span>{" "}
-                <span className="uppercase text-gray-500">({user.role})</span>
+                Logged in as <span className="font-medium">{user?.name || user?.email}</span>{" "}
+                <span className="uppercase text-gray-500">({user?.role})</span>
               </span>
               <button onClick={onLogout} className="text-sm text-red-600 hover:underline" aria-label="Log out">
                 Logout
@@ -51,5 +48,6 @@ export default function Navbar(){
     </nav>
   );
 }
+
 
 

@@ -21,24 +21,21 @@ export default function App(){
             <Route path="/login" element={<Login/>} />
             <Route path="/register" element={<Register/>} />
 
-            {/* Protected routes */}
-            <Route
-              path="/topics"
-              element={<ProtectedRoute><Topics/></ProtectedRoute>}
-            />
-            <Route
-              path="/topics/:id"
-              element={<ProtectedRoute><TopicDetail/></ProtectedRoute>}
-            />
-            <Route
-              path="/upload"
-              element={<ProtectedRoute><Uploads/></ProtectedRoute>}
-            />
+            <Route path="/topics" element={
+              <ProtectedRoute><Topics/></ProtectedRoute>
+            }/>
+            <Route path="/topics/:id" element={
+              <ProtectedRoute><TopicDetail/></ProtectedRoute>
+            }/>
+            <Route path="/uploads" element={
+              <ProtectedRoute><Uploads/></ProtectedRoute>
+            }/>
           </Routes>
         </main>
       </div>
     </ToastProvider>
   );
 }
+
 
 

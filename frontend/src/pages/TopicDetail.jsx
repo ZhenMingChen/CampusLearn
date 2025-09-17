@@ -1,57 +1,54 @@
-// frontend/src/pages/TopicDetail.jsx
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { api } from '../api/client.js';
+import { useNavigate, useParams } from 'react-router-dom';
+import { api, getUser } from '../api/client.js';
 import Button from '../components/Button.jsx';
 import { Card, CardTitle } from '../components/Card.jsx';
 import { useToast } from '../components/Toast.jsx';
-import { getUser } from '../api/client.js';
 
 export default function TopicDetail(){
   const { id } = useParams();
-  const nav = useNavigate();
   const [topic,setTopic] = useState(null);
   const [content,setContent] = useState('');
-  const [loading,setLoading] = useState(false);
-  const [deleting,setDeleting] = useState(false);
+  const [loading,setLoading] = useState(true);
+  const [posting,setPosting] = useState(false);
   const toast = useToast();
   const user = getUser();
+  const nav = useNavigate();
 
   async function load(){
+    setLoading(true);
     try{
-      setTopic(await api(`/topics/${id}`));
-    }catch(e){
-      toast(e.message,'error');
-    }
+      const t = await api(`/topics/${id}`);
+      setTopic(t);
+    }catch(e){ toast(e.message,'error'); }
+    finally{ setLoading(false); }
   }
   useEffect(()=>{ load(); },[id]);
 
   async function reply(e){
-    e.preventDefault(); setLoading(true);
+    e.preventDefault();
+    if (!content.trim()) return toast('Write something','error');
+    setPosting(true);
     try{
       const r = await api(`/replies/${id}`, { method:'POST', body:{ content } });
-      setTopic(t => ({ ...t, replies:[...(t?.replies||[]), r] }));
+      setTopic(prev => ({ ...prev, replies: [ ...(prev?.replies || []), r ] }));
       setContent('');
       toast('Reply posted','success');
     }catch(e){ toast(e.message,'error'); }
-    finally{ setLoading(false); }
+    finally{ setPosting(false); }
   }
 
   async function removeTopic(){
-    if (!window.confirm('Delete this topic? This cannot be undone.')) return;
-    setDeleting(true);
+    if (!confirm('Delete this topic?')) return;
     try{
-      await api(`/topics/${id}`, { method:'DELETE' }); // ADMIN-only route on backend
+      await api(`/topics/${id}`, { method:'DELETE' });
       toast('Topic deleted','success');
       nav('/topics');
-    }catch(e){
-      toast(e.message,'error');
-    }finally{
-      setDeleting(false);
-    }
+    }catch(e){ toast(e.message,'error'); }
   }
 
-  if (!topic) return <p>Loading…</p>;
+  if (loading) return <p>Loading…</p>;
+  if (!topic)  return <p>Not found.</p>;
 
   const canReply = user?.role === 'TUTOR' || user?.role === 'ADMIN';
   const isAdmin  = user?.role === 'ADMIN';
@@ -60,40 +57,31 @@ export default function TopicDetail(){
     <div className="grid md:grid-cols-3 gap-6">
       <div className="md:col-span-2 space-y-4">
         <Card>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <CardTitle>{topic.title}</CardTitle>
-              <p className="mt-2">{topic.content}</p>
-              <div className="mt-3 text-sm text-gray-500">
-                By <span className="font-medium">{topic.author?.name}</span> • {new Date(topic.createdAt).toLocaleString()}
-              </div>
-              {topic.assignee && (
-                <div className="mt-1 text-sm text-gray-500">
-                  Assigned to <span className="font-medium">{topic.assignee?.name}</span>
-                </div>
-              )}
-            </div>
-            <div className="shrink-0 flex flex-col items-end gap-2">
-              <span className="rounded-full bg-gray-100 px-3 py-1 text-xs">{topic.status}</span>
-              {isAdmin && (
-                <Button
-                  onClick={removeTopic}
-                  loading={deleting}
-                  className="bg-red-600 hover:opacity-90"
-                >
-                  Delete Topic
-                </Button>
-              )}
-            </div>
+          <div className="flex items-start justify-between">
+            <CardTitle>{topic?.title || '(no title)'}</CardTitle>
+            {isAdmin && (
+              <button
+                onClick={removeTopic}
+                className="text-sm text-red-600 hover:underline"
+                aria-label="Delete topic"
+                title="Delete topic"
+              >
+                Delete
+              </button>
+            )}
+          </div>
+          <p className="mt-2">{topic?.content || ''}</p>
+          <div className="mt-3 text-sm text-gray-500">
+            By <span className="font-medium">{topic?.author?.name || 'Unknown'}</span> • {new Date(topic?.createdAt || Date.now()).toLocaleString()}
           </div>
         </Card>
 
         <div className="space-y-2">
-          {(topic.replies||[]).map(r=> (
+          {(topic?.replies || []).map(r=> (
             <Card key={r.id}>
-              <div className="text-sm text-gray-500">{new Date(r.createdAt).toLocaleString()}</div>
-              <p className="mt-1">{r.content}</p>
-              <div className="text-sm text-gray-500 mt-1">— {r.author?.name}</div>
+              <div className="text-sm text-gray-500">{new Date(r?.createdAt || Date.now()).toLocaleString()}</div>
+              <p className="mt-1">{r?.content || ''}</p>
+              <div className="text-sm text-gray-500 mt-1">— {r?.author?.name || 'Unknown'}</div>
             </Card>
           ))}
         </div>
@@ -110,11 +98,14 @@ export default function TopicDetail(){
               value={content}
               onChange={e=>setContent(e.target.value)}
             />
-            <Button className="w-full" loading={loading}>Send</Button>
+            <Button className="w-full" loading={posting}>Send</Button>
           </form>
         </Card>
       )}
     </div>
   );
 }
+
+
+
 

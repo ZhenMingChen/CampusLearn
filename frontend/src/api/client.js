@@ -1,71 +1,41 @@
 // frontend/src/api/client.js
-const API = import.meta.env.VITE_API_BASE || 'http://localhost:4000/api/v1';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000/api/v1';
+const storeKey = 'campuslearn_session';
 
-// In-memory session (simple & demo-friendly)
-let accessToken = '';
-let refreshToken = '';
-let currentUser = null; // { id, name, email, role } from backend
-
-export function setSession({ access, refresh, user }) {
-  accessToken = access || '';
-  refreshToken = refresh || '';
-  currentUser = user || null;
+export function getSession() {
+  try { return JSON.parse(localStorage.getItem(storeKey) || '{}'); }
+  catch { return {}; }
 }
+export function setSession(s) { localStorage.setItem(storeKey, JSON.stringify(s || {})); }
+export function clearSession() { localStorage.removeItem(storeKey); }
 
-export function clearSession() {
-  accessToken = '';
-  refreshToken = '';
-  currentUser = null;
-}
+export function getUser() { return getSession().user || null; }
 
-export function getUser() {
-  return currentUser;
-}
+// Backward-compatible exports (both names work)
+export function getAccessToken() { return getSession().accessToken || ''; }
+export function getToken() { return getAccessToken(); }
 
-export async function api(path, { method='GET', body, auth=true, headers={} } = {}) {
-  const res = await fetch(`${API}${path}`, {
+export async function api(path, { method = 'GET', headers = {}, body } = {}) {
+  const token = getAccessToken();
+  const hasBody = body !== undefined;
+  const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers: {
-      'Content-Type': 'application/json',
-      ...(auth && accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      'Accept': 'application/json',
+      ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       ...headers,
     },
-    body: body ? JSON.stringify(body) : undefined,
+    body: hasBody ? JSON.stringify(body) : undefined,
   });
 
-  // Auto-refresh on 401 if we have a refresh token
-  if (res.status === 401 && refreshToken) {
-    const rr = await fetch(`${API}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'x-refresh-token': refreshToken },
-    });
-    if (rr.ok) {
-      const j = await rr.json();
-      accessToken = j.accessToken || '';
-      // retry original request once
-      const again = await fetch(`${API}${path}`, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(auth && accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-          ...headers,
-        },
-        body: body ? JSON.stringify(body) : undefined,
-      });
-      if (!again.ok) {
-        let msg = 'Request failed';
-        try { const e = await again.json(); msg = e.error?.message || msg; } catch {}
-        throw new Error(msg);
-      }
-      return again.json();
-    }
-  }
+  let data = null;
+  try { data = await res.json(); } catch { /* ignore non-JSON */ }
 
   if (!res.ok) {
-    let msg = 'Request failed';
-    try { const e = await res.json(); msg = e.error?.message || msg; } catch {}
+    if (res.status === 401) clearSession();
+    const msg = data?.error?.message || data?.message || `HTTP ${res.status}`;
     throw new Error(msg);
   }
-  return res.json();
+  return data ?? {};
 }
-

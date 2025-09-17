@@ -1,72 +1,91 @@
-// frontend/src/pages/Login.jsx
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { api, setSession } from '../api/client.js';
 import Button from '../components/Button.jsx';
-import Input from '../components/Input.jsx';
-import { Card } from '../components/Card.jsx';
 import { useToast } from '../components/Toast.jsx';
 
 export default function Login(){
+  const [email, setEmail] = useState('student@demo.dev');
+  const [password, setPassword] = useState('Passw0rd!');
+  const [loading, setLoading] = useState(false);
   const nav = useNavigate();
+  const loc = useLocation();
   const toast = useToast();
-  const [email,setEmail] = useState('');
-  const [password,setPassword] = useState('');
-  const [loading,setLoading] = useState(false);
-  const [error,setError] = useState('');
 
   async function onSubmit(e){
     e.preventDefault();
-    setLoading(true); setError('');
-    try{
-      const r = await api('/auth/login', { method:'POST', auth:false, body:{ email,password } });
-      setSession({ access: r.accessToken, refresh: r.refreshToken, user: r.user || { email: r.email, role: r.role } });
-      toast('Welcome back!','success');
-      nav('/topics');
-    }catch(err){
-      setError(err.message || 'Login failed');
-      toast(err.message || 'Login failed','error');
-    }finally{
+    setLoading(true);
+    try {
+      // POST /auth/login -> { accessToken, refreshToken, user }
+      const data = await api('/auth/login', {
+        method: 'POST',
+        body: { email, password },
+      });
+
+      // persist session
+      setSession({
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+        user: data.user,
+      });
+
+      toast('Signed in ✅', 'success');
+
+      // go where they intended, or Topics
+      const to = loc.state?.from || '/topics';
+      nav(to, { replace: true });
+
+      // (optional) force a re-render if something was cached
+      // setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
+    } catch (err) {
+      toast(err.message || 'Login failed', 'error');
+    } finally {
       setLoading(false);
     }
   }
 
-  // Quick login presets
-  const presets = [
-    { label:"👨‍🎓 Student", email:"student@demo.dev", password:"Passw0rd!" },
-    { label:"👨‍🏫 Tutor", email:"tutor@demo.dev", password:"Passw0rd!" },
-    { label:"👨‍💼 Admin", email:"admin@demo.dev", password:"Passw0rd!" }
-  ];
-
   return (
-    <div className="max-w-md mx-auto mt-10">
-      <Card>
-        <h1 className="text-2xl font-semibold mb-4">Sign in</h1>
-        {error && <div role="alert" className="mb-3 rounded-xl bg-red-100 text-red-700 px-3 py-2">{error}</div>}
-        
-        {/* Quick login buttons */}
-        <div className="flex gap-2 mb-4">
-          {presets.map(p => (
-            <Button
-              key={p.label}
-              type="button"
-              className="flex-1"
-              onClick={() => { setEmail(p.email); setPassword(p.password); }}
-            >
-              {p.label}
-            </Button>
-          ))}
+    <div className="max-w-md mx-auto">
+      <h1 className="text-3xl font-bold mb-4">Login</h1>
+      <form onSubmit={onSubmit} className="space-y-3">
+        <div>
+          <label className="block text-sm mb-1">Email</label>
+          <input
+            type="email"
+            className="w-full rounded-xl border border-gray-300 p-2"
+            value={email}
+            onChange={e=>setEmail(e.target.value)}
+            placeholder="you@example.com"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm mb-1">Password</label>
+          <input
+            type="password"
+            className="w-full rounded-xl border border-gray-300 p-2"
+            value={password}
+            onChange={e=>setPassword(e.target.value)}
+            required
+          />
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-3">
-          <Input label="Email" type="email" value={email} onChange={e=>setEmail(e.target.value)} />
-          <Input label="Password" type="password" value={password} onChange={e=>setPassword(e.target.value)} />
-          <Button loading={loading} className="w-full">Sign in</Button>
-        </form>
-        <p className="text-sm text-gray-600 mt-3">No account? <Link className="underline" to="/register">Create one</Link></p>
-      </Card>
+        <Button className="w-full" loading={loading}>Sign in</Button>
+      </form>
+
+      <p className="text-sm mt-3">
+        No account? <Link to="/register" className="text-blue-600 underline">Register</Link>
+      </p>
+
+      <div className="text-xs text-gray-500 mt-6 space-y-1">
+        <div>Demo logins:</div>
+        <div>Student — <code>student@demo.dev</code> / <code>Passw0rd!</code></div>
+        <div>Tutor — <code>tutor@demo.dev</code> / <code>Passw0rd!</code></div>
+        <div>Admin — <code>admin@demo.dev</code> / <code>Passw0rd!</code></div>
+      </div>
     </div>
   );
 }
+
 
 
