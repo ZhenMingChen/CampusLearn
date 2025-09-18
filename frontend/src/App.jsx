@@ -13,9 +13,19 @@ import Uploads from './pages/Uploads.jsx';
 export default function App(){
   return (
     <ToastProvider>
+      {/* Skip link for keyboard users */}
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:p-2 bg-white text-blue-700 rounded-md shadow top-2 left-2 z-50"
+      >
+        Skip to main content
+      </a>
+
       <div className="min-h-screen bg-gray-50 text-gray-900">
         <Navbar/>
-        <main className="max-w-5xl mx-auto p-4">
+
+        {/* Main landmark with an id for the skip link. tabindex makes it focusable when jumped to. */}
+        <main id="main" tabIndex={-1} className="max-w-5xl mx-auto p-4">
           <Routes>
             <Route path="/" element={<Navigate to="/login" />} />
             <Route path="/login" element={<Login/>} />
@@ -33,9 +43,13 @@ export default function App(){
           </Routes>
         </main>
       </div>
+
+      {/* Global screen-reader live region for status messages */}
+      <div id="sr-status" aria-live="polite" aria-atomic="true" className="sr-only" />
     </ToastProvider>
   );
 }
+
 
 
 

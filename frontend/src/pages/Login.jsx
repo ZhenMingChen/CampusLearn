@@ -1,3 +1,4 @@
+// frontend/src/pages/Login.jsx
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { api, setSession } from '../api/client.js';
@@ -12,8 +13,15 @@ export default function Login(){
   const loc = useLocation();
   const toast = useToast();
 
+  // Screen-reader announcement helper (avoids optional chaining on assignment)
+  const announce = (msg) => {
+    const el = document.getElementById('sr-status');
+    if (el) el.textContent = msg;
+  };
+
   async function onSubmit(e){
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     try {
       // POST /auth/login -> { accessToken, refreshToken, user }
@@ -29,16 +37,16 @@ export default function Login(){
         user: data.user,
       });
 
+      announce('Signed in successfully');
       toast('Signed in ✅', 'success');
 
       // go where they intended, or Topics
       const to = loc.state?.from || '/topics';
       nav(to, { replace: true });
-
-      // (optional) force a re-render if something was cached
-      // setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
     } catch (err) {
-      toast(err.message || 'Login failed', 'error');
+      const msg = err?.message || 'Login failed';
+      announce(msg);
+      toast(msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -47,30 +55,43 @@ export default function Login(){
   return (
     <div className="max-w-md mx-auto">
       <h1 className="text-3xl font-bold mb-4">Login</h1>
-      <form onSubmit={onSubmit} className="space-y-3">
+
+      <form onSubmit={onSubmit} className="space-y-3" noValidate>
         <div>
-          <label className="block text-sm mb-1">Email</label>
+          <label htmlFor="email" className="block text-sm mb-1">Email</label>
           <input
+            id="email"
             type="email"
-            className="w-full rounded-xl border border-gray-300 p-2"
+            className="w-full rounded-xl border border-gray-300 p-2
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
             value={email}
             onChange={e=>setEmail(e.target.value)}
             placeholder="you@example.com"
+            autoComplete="email"
             required
-          />
-        </div>
-        <div>
-          <label className="block text-sm mb-1">Password</label>
-          <input
-            type="password"
-            className="w-full rounded-xl border border-gray-300 p-2"
-            value={password}
-            onChange={e=>setPassword(e.target.value)}
-            required
+            disabled={loading}
           />
         </div>
 
-        <Button className="w-full" loading={loading}>Sign in</Button>
+        <div>
+          <label htmlFor="password" className="block text-sm mb-1">Password</label>
+          <input
+            id="password"
+            type="password"
+            className="w-full rounded-xl border border-gray-300 p-2
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+            value={password}
+            onChange={e=>setPassword(e.target.value)}
+            autoComplete="current-password"
+            required
+            disabled={loading}
+          />
+        </div>
+
+        {/* Submit button (type is important) */}
+        <Button type="submit" className="w-full" loading={loading}>
+          Sign in
+        </Button>
       </form>
 
       <p className="text-sm mt-3">
@@ -86,6 +107,7 @@ export default function Login(){
     </div>
   );
 }
+
 
 
 
