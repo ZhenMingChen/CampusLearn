@@ -6,29 +6,43 @@ export default function Navbar(){
   const nav = useNavigate();
   const user = getUser();
 
-  const link = (to, label) => (
-    <Link
-      to={to}
-      className={`px-3 py-1.5 rounded-xl text-sm ${
-        pathname.startsWith(to) ? "bg-black text-white" : "text-gray-700 hover:bg-gray-100"
-      }`}
-    >
-      {label}
-    </Link>
-  );
+  const isActive = (to) => pathname === to || pathname.startsWith(to + "/") || pathname === to;
+
+  const link = (to, label) => {
+    const active = isActive(to);
+    return (
+      <Link
+        to={to}
+        aria-current={active ? "page" : undefined}
+        className={`px-3 py-1.5 rounded-xl text-sm
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2
+          ${active ? "bg-black text-white" : "text-gray-700 hover:bg-gray-100"}`}
+      >
+        {label}
+      </Link>
+    );
+  };
 
   const onLogout = () => { clearSession(); nav("/login"); };
 
   return (
-    <nav className="bg-white/80 backdrop-blur border-b sticky top-0 z-40">
+    <nav aria-label="Primary" className="bg-white/80 backdrop-blur border-b sticky top-0 z-40">
       <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-2">
-        <Link to={user ? "/topics" : "/login"} className="font-bold">CampusLearn</Link>
+        <Link
+          to={user ? "/topics" : "/login"}
+          aria-label="CampusLearn home"
+          className="font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 rounded-md"
+        >
+          CampusLearn
+        </Link>
+
         {user && (
           <div className="ml-2 flex gap-1">
             {link("/topics","Topics")}
             {link("/uploads","Uploads")}
           </div>
         )}
+
         <div className="ml-auto flex items-center gap-3">
           {user ? (
             <>
@@ -36,18 +50,29 @@ export default function Navbar(){
                 Logged in as <span className="font-medium">{user?.name || user?.email}</span>{" "}
                 <span className="uppercase text-gray-500">({user?.role})</span>
               </span>
-              <button onClick={onLogout} className="text-sm text-red-600 hover:underline" aria-label="Log out">
+              <button
+                type="button"
+                onClick={onLogout}
+                className="text-sm text-red-600 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 rounded-md"
+                aria-label="Log out"
+              >
                 Logout
               </button>
             </>
           ) : (
-            <Link to="/login" className="text-sm text-gray-700 hover:underline">Sign in</Link>
+            <Link
+              to="/login"
+              className="text-sm text-gray-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 rounded-md"
+            >
+              Sign in
+            </Link>
           )}
         </div>
       </div>
     </nav>
   );
 }
+
 
 
 
